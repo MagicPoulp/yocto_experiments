@@ -1,0 +1,22 @@
+# Install all required dependencies
+sudo apt-get update
+sudo apt-get install -y \
+  gawk wget git diffstat unzip texinfo gcc build-essential \
+  chrpath socat cpio python3 python3-pip python3-pexpect \
+  xz-utils debianutils iputils-ping python3-git \
+  python3-jinja2 libegl1 libsdl1.2-dev \
+  pylint xterm python3-subunit mesa-common-dev zstd \
+  lz4 file locales libacl1
+
+# Clone Poky at the Scarthgap LTS branch
+git clone -b scarthgap https://git.yoctoproject.org/poky
+cd poky
+
+# From inside the poky directory
+source oe-init-build-env ../build    # sets up the build environment
+
+# Go back and create your layer
+cd ..
+bitbake-layers create-layer meta-mydistro
+This creates:
+
