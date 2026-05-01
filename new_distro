@@ -16,7 +16,147 @@ cd poky
 source oe-init-build-env ../build    # sets up the build environment
 
 # Go back and create your layer
-cd ..
-bitbake-layers create-layer meta-mydistro
+bitbake-layers create-layer ../meta-mydistro
+
 This creates:
 
+meta-mydistro/
+├── conf/
+│   └── layer.conf        ← auto-generated
+├── recipes-example/
+└── README
+
+
+mkdir -p meta-mydistro/conf/distro
+mkdir -p meta-mydistro/recipes-core/images
+mkdir -p meta-mydistro/recipes-kernel/linux
+
+# create them (see the full guide)
+
+#add the checksums
+wget https://cdn.kernel.org/pub/linux/kernel/v7.x/sha256sums.asc
+Then grep for your specific file:
+grep linux-7 sha256sums.asc
+
+# add layers
+
+cd build
+bitbake-layers add-layer ../meta-mydistro
+
+# build
+
+# Still inside the build directory
+source ../poky/oe-init-build-env .
+
+# Build your image
+bitbake mydistro-image
+
+# comment out debconf in the kerbnel .bb file
+# compile a debconf, then add it in the kernel.bb
+# the command can take 20min
+
+# in build
+bitbake linux-kernel7 -c menuconfig
+# from build/..
+mkdir -p meta-mydistro/recipes-kernel/linux/files
+mkdir ../meta-mydistro/recipes-kernel/linux/files/
+cp ./tmp-glibc/work/qemux86_64-oe-linux/linux-kernel7/7.0.3/build/.config \
+    ../meta-mydistro/recipes-kernel/linux/files/defconfig
+
+# final view
+workspace/
+├── poky/                    ← Yocto build system (don't touch)
+├── meta-mydistro/           ← YOUR layer
+│   ├── conf/
+│   │   ├── layer.conf
+│   │   └── distro/
+│   │       └── mydistro.conf   ← YOUR distro definition
+│   ├── recipes-core/
+│   │   └── images/
+│   │       └── mydistro-image.bb
+│   └── recipes-kernel/
+│       └── linux/
+│           └── linux-kernel7_7.0.bb
+└── build/                   ← build output
+    ├── conf/
+    │   └── local.conf
+    └── tmp/deploy/images/   ← your final image lands here
+
+-------------------------
+
+source ../poky/oe-init-build-env .
+
+# Check for CVEs in your build
+bitbake -c cve_check mydistro-image
+bitbake -c cve_check world
+bitbake -c cve_check openssl
+
+local.conf can have this to auto generate reports in tmp-glibc/deploy/cve/
+INHERIT += "cve-check"
+
+# See all layers loaded
+bitbake-layers show-layers
+
+bitbake-layers show-layers
+NOTE: Starting bitbake server...
+layer                 path                                                                    priority
+========================================================================================================
+core                  /home/user/Documents/yocto/poky/meta                                    5
+yocto                 /home/user/Documents/yocto/poky/meta-poky                               5
+yoctobsp              /home/user/Documents/yocto/poky/meta-yocto-bsp                          5
+meta-mydistro         /home/user/Documents/yocto/meta-mydistro                                6
+
+----------------------------------------------
+
+interpret output
+
+build/tmp-glibc/deploy/images/qemux86-64/
+
+-------------------------
+
+tmp-glibc/deploy/images/qemux86-64/
+
+# Your actual image
+mydistro-image-qemux86-64.ext4          ← your root filesystem image
+
+# The kernel
+bzImage                                  ← compressed kernel binary
+bzImage-7.0.3-qemux86-64.bin            ← same with version stamp
+
+# Bootloader / firmware
+ovmf.qemuboot.conf                       ← QEMU boot config (x86)
+
+# Manifest — list of every package in the image
+mydistro-image-qemux86-64.manifest      ← useful for auditing
+
+# Symlinks pointing to the latest build
+mydistro-image-qemux86-64.ext4          → real file with timestamp
+bzImage                                  → real file with timestamp
+
+Detail:
+.ext4 Your entire root filesystem as a disk imageFlash to device or run in QEMU
+bzImage The compiled Linux kernel 7 binary Goes on the boot partition
+.manifest Text list of every package + versionAuditing, CVE tracking
+.qemuboot.conf QEMU launch parametersAuto-used by runqemu
+
+
+----------------------
+
+The manifest is needed for the SBOM
+cat tmp-glibc/deploy/images/qemux86-64/mydistro-image-qemux86-64.manifest
+
+
+test in qemu not real hardware
+# From your build directory
+runqemu qemux86-64 mydistro-image
+
+# for a real hardware:
+# Flash to an SD card or USB drive
+sudo dd if=mydistro-image-qemux86-64.wic of=/dev/sdX bs=4M status=progress
+
+# how to clean
+source oe-init-build-env .
+time bitbake -c cleanall mydistro-image
+rm -rf tmp
+rm -rf sstate-cache/
+# total nuke: git clean -fdX

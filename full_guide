@@ -1,0 +1,139 @@
+Good news — Linux kernel 7.0 was officially released on April 12, 2026, so your timing is right. The current Yocto LTS is version 5.0 "Scarthgap", released April 2024 and supported until April 2028 — that's what we'll use as the stable base.
+
+Building a Custom Yocto Distro with Kernel 7 + glibc
+Step 1 — Set Up Your Host Machine
+Yocto requires a Linux host. Ubuntu 22.04 or 24.04 LTS is the most supported.
+
+
+# Install all required dependencies
+sudo apt-get update
+sudo apt-get install -y \
+  gawk wget git diffstat unzip texinfo gcc build-essential \
+  chrpath socat cpio python3 python3-pip python3-pexpect \
+  xz-utils debianutils iputils-ping python3-git \
+  python3-jinja2 libegl1-mesa libsdl1.2-dev \
+  pylint xterm python3-subunit mesa-common-dev zstd \
+  liblz4-tool file locales libacl1
+
+# 2
+# Clone Poky at the Scarthgap LTS branch
+git clone -b scarthgap https://git.yoctoproject.org/poky
+cd poky
+
+# 3
+# From inside the poky directory
+source oe-init-build-env ../build    # sets up the build environment
+
+# Go back and create your layer
+cd ..
+bitbake-layers create-layer meta-mydistro
+
+mkdir -p meta-mydistro/conf/distro
+mkdir -p meta-mydistro/recipes-core/images
+mkdir -p meta-mydistro/recipes-kernel/linux
+
+# 4
+
+meta-mydistro/conf/distro/mydistro.conf
+
+# ── Identity ──────────────────────────────
+DISTRO        = "mydistro"
+DISTRO_NAME   = "My Custom Distro"
+DISTRO_VERSION = "1.0"
+
+# ── C Library: glibc (the default, explicit here for clarity) ──
+TCLIBC = "glibc"
+
+# ── Only the features you actually need ───
+DISTRO_FEATURES = "ext2 ext3 ipv4 ipv6 security"
+
+# ── Remove everything you don't need ──────
+DISTRO_FEATURES:remove = " \
+    x11 wayland opengl vulkan \
+    bluetooth wifi nfc 3g \
+    pulseaudio alsa \
+    nfs pci \
+"
+
+# ── Compiler hardening flags ───────────────
+CFLAGS:append   = " -fstack-protector-strong -D_FORTIFY_SOURCE=2"
+LDFLAGS:append  = " -Wl,-z,relro -Wl,-z,now"
+
+# ── No debug output in production ─────────
+DISTRO_FEATURES:remove = "debuginfod"
+
+# 5 kernel
+meta-mydistro/recipes-kernel/linux/linux-kernel7_7.0.bb
+
+SUMMARY = "Linux Kernel 7.0"
+SECTION = "kernel"
+LICENSE = "GPL-2.0-only"
+
+inherit kernel
+
+# Fetch kernel 7.0.3 directly from kernel.org
+SRC_URI = "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.0.3.tar.xz"
+SRC_URI[sha256sum] = ""   # fill in after first fetch
+
+S = "${WORKDIR}/linux-7.0.3"
+
+LINUX_VERSION = "7.0.3"
+PV = "7.0.3"
+
+# Point to your kernel config
+SRC_URI += "file://defconfig"
+
+COMPATIBLE_MACHINE = "qemux86-64"   # change to your target
+
+# 6 recipe
+
+ meta-mydistro/recipes-core/images/mydistro-image.bb
+
+SUMMARY = "My minimal custom distro image"
+
+inherit core-image
+
+# Start from scratch — only what you explicitly add
+IMAGE_INSTALL = " \
+    packagegroup-core-boot \
+    busybox \
+"
+
+# Lock down the image
+IMAGE_FEATURES  = "read-only-rootfs"
+IMAGE_FEATURES:remove = " \
+    debug-tweaks \
+    tools-debug \
+    tools-sdk \
+    dev-pkgs \
+    dbg-pkgs \
+"
+
+# step 7
+
+cd build
+bitbake-layers add-layer ../meta-mydistro
+
+conf/local.conf
+
+# Use your distro
+DISTRO = "mydistro"
+
+# Target machine (use qemux86-64 to test in emulator first)
+MACHINE = "qemux86-64"
+
+# Use glibc explicitly
+TCLIBC = "glibc"
+
+# Parallel build settings (adjust to your CPU count)
+BB_NUMBER_THREADS = "8"
+PARALLEL_MAKE     = "-j 8"
+
+# 8 build
+
+# Still inside the build directory
+source ../poky/oe-init-build-env .
+
+# Build your image
+bitbake mydistro-image
+
