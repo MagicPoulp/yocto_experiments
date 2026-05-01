@@ -1,0 +1,8 @@
+expat-2.6.4-r0 do_cve_check: Found unpatched CVE (CVE-2025-66382 CVE-2026-32776 CVE-2026-32777 CVE-2026-32778 CVE-2026-41080), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/expat/2.6.4/temp/cve.log
+WARNING: sqlite3-3_3.45.3-r0 do_cve_check: Found unpatched CVE (CVE-2025-70873), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/sqlite3/3.45.3/temp/cve.log
+WARNING: openssl-3.5.5-r0 do_cve_check: Found unpatched CVE (CVE-2026-28387 CVE-2026-28388 CVE-2026-28389 CVE-2026-28390 CVE-2026-31789 CVE-2026-31790), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/openssl/3.5.5/temp/cve.log
+WARNING: xz-5.4.7-r0 do_cve_check: Found unpatched CVE (CVE-2026-34743), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/xz/5.4.7/temp/cve.log
+WARNING: perl-5.38.4-r0 do_cve_check: Found unpatched CVE (CVE-2026-4176), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/perl/5.38.4/temp/cve.log
+WARNING: python3-3.12.12-r0 do_cve_check: Found unpatched CVE (CVE-2025-12781 CVE-2026-4519), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/python3/3.12.12/temp/cve.log
+WARNING: util-linux-2.39.3-r0 do_cve_check: Found unpatched CVE (CVE-2026-27456), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/util-linux/2.39.3/temp/cve.log
+WARNING: ncurses-6.4-r0 do_cve_check: Found unpatched CVE (CVE-2025-69720), for more information check /home/user/Documents/yocto/build/tmp-glibc/work/core2-64-oe-linux/ncurses/6.4/temp/cve.log

@@ -10,8 +10,17 @@ Thierry Vilmart
     - CVE scanning enabled via INHERIT cve-check on every build
     - Root account locked, non-root user provisioned via extrausers
     - SBOM manifest auto-generated at deploy time
+    - Worrking support for running in a qemu VM
+    - Possible to login with a non-privileged user (no sudo)
 
-## How to use it
+## Here lies a nice qemu run that shows:
+
+    - the kernel 7 version
+    - a login with a non-privileged user (no sudo)
+
+![A qemu run with a login showing the kernel 7 version](screenshots/qemu_run_of_image_kernel7.png)
+
+## How to use this Yocto setup it
 
 The vulnerabilities report is generated using an option INHERIT += "cve-check"
 

@@ -144,7 +144,7 @@ bzImage The compiled Linux kernel 7 binary Goes on the boot partition
 
 The manifest is needed for the SBOM
 cat tmp-glibc/deploy/images/qemux86-64/mydistro-image-qemux86-64.manifest
-
+cat tmp-glibc/deploy/images/qemux86-64/mydistro-image-qemux86-64.rootfs.manifest
 
 test in qemu not real hardware
 # From your build directory
@@ -160,3 +160,28 @@ time bitbake -c cleanall mydistro-image
 rm -rf tmp
 rm -rf sstate-cache/
 # total nuke: git clean -fdX
+
+-----------------------------------------
+
+# how to run in qemu
+
+cd build
+source oe-init-build-env .
+runqemu nographic tmp-glibc/deploy/images/qemux86-64/mydistro-image-qemux86-64.rootfs.qemuboot.conf
+
+# mount the disk from the host:
+bitbake -c clean mydistro-image
+bitbake -f -c rootfs mydistro-image
+sudo mount -o loop ./tmp-glibc/work/qemux86_64-oe-linux/mydistro-image/1.0/deploy-mydistro-image-image-complete/mydistro-image-qemux86-64.rootfs-20260501155620.ext4 /mnt/disk/
+
+-----------------------------------------
+
+# one way to debug a recipe:
+best to use the devshell
+bitbake -c devshell RECIPE
+
+however, one can also inspect created log files in the generated image
+
+    DEBUG_LOG="${IMAGE_ROOTFS}/home/root/debug_pwd.log"
+    echo ">>>>>>>>>>>>>>>>>>> --- Start Password Injection ---" > $DEBUG_LOG
+sudo mount -o loop ./tmp-glibc/work/qemux86_64-oe-linux/mydistro-image/1.0/deploy-mydistro-image-image-complete/mydistro-image-qemux86-64.rootfs.ext4 /mnt/disk/
