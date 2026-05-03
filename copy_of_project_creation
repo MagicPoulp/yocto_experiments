@@ -1,0 +1,79 @@
+user@Host-001:~/Documents/yocto$ ./bitbake/bin/bitbake-setup init
+Bitbake-setup is using /home/user/Documents/yocto/bitbake-builds as top directory.
+
+/home/user/Documents/yocto/bitbake-builds looks like a new top directory. If you would like to use a different directory, answer "n" below and either:
+	1) Change the default bitbake-setup settings:
+		bitbake-setup settings set default top-level-prefix <PATH>
+		bitbake-setup settings set default top-level-name <NAME>
+	2) Pass one or more options on the command line to change the top level directory in that invocation only:
+		bitbake-setup --setting default top-dir-prefix <PATH> ...
+		bitbake-setup --setting default top-dir-name <NAME> ...
+
+A common site.conf file will be created, please check it is correct before running builds
+    /home/user/Documents/yocto/bitbake-builds/site.conf
+
+Proceed? (y/N): y
+
+Available configurations:
+1. poky-master	Poky - The Yocto Project testing distribution configurations and hardware test platforms
+2. oe-nodistro-master	OpenEmbedded - 'nodistro' basic configuration
+3. poky-whinlatter	Poky - The Yocto Project testing distribution configurations and hardware test platforms, release 5.3 'whinlatter' (supported until 2026-05-31)
+4. oe-nodistro-whinlatter	OpenEmbedded - 'nodistro' basic configuration, release 5.3 'whinlatter' (supported until 2026-05-31)
+
+Please select one of the above configurations by its number:
+1
+
+Available bitbake configurations:
+1. poky	Poky - The Yocto Project testing distribution
+2. poky-with-sstate	Poky - The Yocto Project testing distribution with internet sstate acceleration. Use with caution as it requires a completely robust local network with sufficient bandwidth.
+
+Please select one of the above bitbake configurations by its number:
+1
+
+Target machines:
+1. machine/qemux86-64
+2. machine/qemuarm64
+3. machine/qemuriscv64
+4. machine/genericarm64
+5. machine/genericx86-64
+
+Please select one of the above options by its number:
+1
+
+Distribution configuration variants:
+1. distro/poky
+2. distro/poky-altcfg
+3. distro/poky-tiny
+
+Please select one of the above options by its number:
+1
+
+Run 'bitbake-setup init --non-interactive poky-master poky distro/poky machine/qemux86-64 --setup-dir-name mydistro-wrynose' to select this configuration non-interactively.
+
+Enter setup directory name: [poky-master] mydistro-wrynose
+Initializing a setup directory in
+    /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose
+Continue? (y/N): y
+
+Fetching layer/tool repositories into /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/layers
+    bitbake
+    openembedded-core          
+    meta-yocto                 
+    yocto-docs                 
+                               
+Setting up bitbake configuration in
+    /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build
+
+This bitbake configuration provides:
+    Poky - The Yocto Project testing distribution
+
+Usage instructions and additional information are in
+     /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/README
+
+To run builds, source the environment using
+    . /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/init-build-env
+
+Run 'bitbake-config-build enable-fragment <fragment-name>' to enable additional fragments or replace built-in ones (e.g. machine/<name> or distro/<name> to change MACHINE or DISTRO).
+
+The bitbake configuration files (local.conf, bblayers.conf and more) can be found in
+    /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/conf

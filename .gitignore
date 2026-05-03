@@ -5,3 +5,42 @@ downloads/
 *.log
 bitbake.lock
 sstate-cache/
+bitbake/
+
+# bitbake-setup downloads and cache (large bare git repos, regeneratable)
+bitbake-builds/.bitbake-setup-downloads/
+bitbake-builds/.bitbake-setup-cache/
+
+# Build output
+bitbake-builds/*/build/tmp/
+bitbake-builds/*/build/cache/
+bitbake-builds/*/build/downloads/
+bitbake-builds/*/build/sstate-cache/
+
+# Host tools symlinks (auto-generated)
+bitbake-builds/*/build/tmp/hosttools/
+
+# Logs
+bitbake-builds/*/build/tmp/log/
+bitbake-builds/*/layers/logs/
+
+# Machine-local config
+bitbake-builds/site.conf
+bitbake-builds/*/build/conf/site.conf
+
+# Third-party layers (managed by bitbake-setup, not yours to version)
+bitbake-builds/*/layers/openembedded-core
+bitbake-builds/*/layers/meta-yocto
+bitbake-builds/*/layers/oe-scripts
+bitbake-builds/*/layers/oe-init-build-env-dir
+bitbake-builds/*/layers/setup-build
+bitbake-builds/*/layers/yocto-docs
+bitbake-builds/*/layers/.oe-layers.json
+
+bitbake-builds/mydistro-wrynose/build/conf/conf-notes.txt
+bitbake-builds/mydistro-wrynose/build/conf/conf-summary.txt
+bitbake-builds/mydistro-wrynose/build/conf/templateconf.cfg
+bitbake-builds/mydistro-wrynose/build/init-build-env
+
+pn-buildlist
+task-depends.dot

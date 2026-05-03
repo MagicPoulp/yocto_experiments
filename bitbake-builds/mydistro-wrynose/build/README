@@ -1,0 +1,9 @@
+Poky - The Yocto Project testing distribution
+
+Additional information is in /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/conf/conf-summary.txt and /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/conf/conf-notes.txt
+
+Source the environment using '. /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/init-build-env' to run builds from the command line.
+
+Run 'bitbake-config-build enable-fragment <fragment-name>' to enable additional fragments or replace built-in ones (e.g. machine/<name> or distro/<name> to change MACHINE or DISTRO).
+
+The bitbake configuration files (local.conf, bblayers.conf and more) can be found in /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/conf
