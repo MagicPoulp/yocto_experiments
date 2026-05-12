@@ -2,46 +2,30 @@
     "sources": {
         "bitbake": {
             "git-remote": {
-                "branch": "master",
-                "remotes": {
-                    "origin": {
-                        "uri": "https://git.openembedded.org/bitbake"
-                    }
-                },
-                "rev": "cb28befc56d201cace72d70891e731b955fb567f"
+                "branch": "2.18",
+                "rev": "a2dd9be788274d9c7280be5b1be5eb5c3990cf54",
+                "uri": "https://git.openembedded.org/bitbake"
             }
         },
         "meta-yocto": {
             "git-remote": {
-                "branch": "master",
-                "remotes": {
-                    "origin": {
-                        "uri": "https://git.yoctoproject.org/meta-yocto"
-                    }
-                },
-                "rev": "a67ae0e83d8aba0c46cb8383808b2d1203fbb414"
+                "branch": "wrynose",
+                "rev": "904846ae078ee20de073040ebb77c86e19250f56",
+                "uri": "https://git.yoctoproject.org/meta-yocto"
             }
         },
         "openembedded-core": {
             "git-remote": {
-                "branch": "master",
-                "remotes": {
-                    "origin": {
-                        "uri": "https://git.openembedded.org/openembedded-core"
-                    }
-                },
-                "rev": "9ca41405e6bca276468a3b6f67eaa328b8016485"
+                "branch": "wrynose",
+                "rev": "080e184ad9a07b469da7e8b045a93cefd5bf2438",
+                "uri": "https://git.openembedded.org/openembedded-core"
             }
         },
         "yocto-docs": {
             "git-remote": {
-                "branch": "master",
-                "remotes": {
-                    "origin": {
-                        "uri": "https://git.yoctoproject.org/yocto-docs"
-                    }
-                },
-                "rev": "6b78593bed7174245fd7f6861263c69a3c439a74"
+                "branch": "wrynose",
+                "rev": "6b78593bed7174245fd7f6861263c69a3c439a74",
+                "uri": "https://git.yoctoproject.org/yocto-docs"
             }
         }
     }

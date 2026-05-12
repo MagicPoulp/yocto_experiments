@@ -44,3 +44,7 @@ bitbake-builds/mydistro-wrynose/build/init-build-env
 
 pn-buildlist
 task-depends.dot
+
+bitbake-builds/*/build/conf-upstream.*/
+bitbake-builds/*/layers/*-backup.*/
+bitbake-builds/*/layers/sources-fixed-revisions.json

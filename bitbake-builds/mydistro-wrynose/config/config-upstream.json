@@ -13,25 +13,49 @@
         },
         "oe-fragments-one-of": {
             "distro": {
-                "description": "Distribution configuration variants",
+                "description": "Target distributions",
                 "options": [
-                    "distro/poky",
-                    "distro/poky-altcfg",
-                    "distro/poky-tiny"
+                    {
+                        "description": "Yocto Project Reference Distro",
+                        "name": "distro/poky"
+                    },
+                    {
+                        "description": "Poky alternative with systemd as init manager",
+                        "name": "distro/poky-altcfg"
+                    },
+                    {
+                        "description": "Poky alternative optimized for size",
+                        "name": "distro/poky-tiny"
+                    }
                 ]
             },
             "machine": {
                 "description": "Target machines",
                 "options": [
-                    "machine/qemux86-64",
-                    "machine/qemuarm64",
-                    "machine/qemuriscv64",
-                    "machine/genericarm64",
-                    "machine/genericx86-64"
+                    {
+                        "description": "x86-64 system on QEMU",
+                        "name": "machine/qemux86-64"
+                    },
+                    {
+                        "description": "ARMv8 system on QEMU",
+                        "name": "machine/qemuarm64"
+                    },
+                    {
+                        "description": "RISC-V system on QEMU",
+                        "name": "machine/qemuriscv64"
+                    },
+                    {
+                        "description": "Arm64 SystemReady IR/ES platforms",
+                        "name": "machine/genericarm64"
+                    },
+                    {
+                        "description": "x86_64 (64-bit) PCs and servers",
+                        "name": "machine/genericx86-64"
+                    }
                 ]
             }
         },
-        "setup-dir-name": "$distro-master"
+        "setup-dir-name": "$distro-wrynose"
     },
     "data": {
         "bitbake-setup": {
@@ -57,80 +81,89 @@
                     ],
                     "oe-fragments-one-of": {
                         "distro": {
-                            "description": "Distribution configuration variants",
+                            "description": "Target distributions",
                             "options": [
-                                "distro/poky",
-                                "distro/poky-altcfg",
-                                "distro/poky-tiny"
+                                {
+                                    "description": "Yocto Project Reference Distro",
+                                    "name": "distro/poky"
+                                },
+                                {
+                                    "description": "Poky alternative with systemd as init manager",
+                                    "name": "distro/poky-altcfg"
+                                },
+                                {
+                                    "description": "Poky alternative optimized for size",
+                                    "name": "distro/poky-tiny"
+                                }
                             ]
                         },
                         "machine": {
                             "description": "Target machines",
                             "options": [
-                                "machine/qemux86-64",
-                                "machine/qemuarm64",
-                                "machine/qemuriscv64",
-                                "machine/genericarm64",
-                                "machine/genericx86-64"
+                                {
+                                    "description": "x86-64 system on QEMU",
+                                    "name": "machine/qemux86-64"
+                                },
+                                {
+                                    "description": "ARMv8 system on QEMU",
+                                    "name": "machine/qemuarm64"
+                                },
+                                {
+                                    "description": "RISC-V system on QEMU",
+                                    "name": "machine/qemuriscv64"
+                                },
+                                {
+                                    "description": "Arm64 SystemReady IR/ES platforms",
+                                    "name": "machine/genericarm64"
+                                },
+                                {
+                                    "description": "x86_64 (64-bit) PCs and servers",
+                                    "name": "machine/genericx86-64"
+                                }
                             ]
                         }
                     },
-                    "setup-dir-name": "$distro-master"
+                    "setup-dir-name": "$distro-wrynose"
                 }
             ]
         },
-        "description": "Poky - The Yocto Project testing distribution configurations and hardware test platforms",
+        "description": "Poky - The Yocto Project testing distribution configurations and hardware test platforms, release 6.0 'wrynose'",
+        "expires": "2030-05-31",
         "sources": {
             "bitbake": {
                 "git-remote": {
-                    "branch": "master",
-                    "remotes": {
-                        "origin": {
-                            "uri": "https://git.openembedded.org/bitbake"
-                        }
-                    },
-                    "rev": "master"
+                    "branch": "2.18",
+                    "rev": "2.18",
+                    "uri": "https://git.openembedded.org/bitbake"
                 }
             },
             "meta-yocto": {
                 "git-remote": {
-                    "branch": "master",
-                    "remotes": {
-                        "origin": {
-                            "uri": "https://git.yoctoproject.org/meta-yocto"
-                        }
-                    },
-                    "rev": "master"
+                    "branch": "wrynose",
+                    "rev": "wrynose",
+                    "uri": "https://git.yoctoproject.org/meta-yocto"
                 }
             },
             "openembedded-core": {
                 "git-remote": {
-                    "branch": "master",
-                    "remotes": {
-                        "origin": {
-                            "uri": "https://git.openembedded.org/openembedded-core"
-                        }
-                    },
-                    "rev": "master"
+                    "branch": "wrynose",
+                    "rev": "wrynose",
+                    "uri": "https://git.openembedded.org/openembedded-core"
                 }
             },
             "yocto-docs": {
                 "git-remote": {
-                    "branch": "master",
-                    "remotes": {
-                        "origin": {
-                            "uri": "https://git.yoctoproject.org/yocto-docs"
-                        }
-                    },
-                    "rev": "master"
+                    "branch": "wrynose",
+                    "rev": "wrynose",
+                    "uri": "https://git.yoctoproject.org/yocto-docs"
                 }
             }
         },
         "version": "1.0"
     },
-    "name": "poky-master",
+    "name": "poky-wrynose",
     "non-interactive-cmdline-options": [
-        "poky-master",
+        "poky-wrynose",
         "poky",
         "distro/poky",
         "machine/qemux86-64"

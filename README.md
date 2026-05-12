@@ -22,6 +22,21 @@ bitbake-builds/mydistro-wrynose/config/config-upstream.json
 "rev": "sha..."
 ```
 
+Note:
+The update could be done automatically using the update command. We also needed to fix manually the remotes in each layer repo.
+```
+./bitbake/bin/bitbake-setup update --setup-dir bitbake-builds/mydistro-wrynose --rebase-conflicts-strategy=backup
+git remote get-url dldir
+git remote set-url dldir file:///home/user/Documents/yocto/bitbake-builds/.bitbake-setup-downloads/git2/git.openembedded.org.openembedded-core
+```
+
+There is no hard-coding.
+
+config-upstream.json has a hard-coded path for dl-dir that is created dynamically by the update command "bitbake-setup update" above.
+
+The output of this command below is entirely dynamic (no hard-coding).
+./bitbake/bin/bitbake-setup settings list
+
 ## Buildable Yocto distro with kernel 7 and CVE/SBOM generation
 
     - Custom mydistro layer targeting qemux86-64 with glibc
