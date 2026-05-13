@@ -67,6 +67,7 @@ git clone -b yocto-5.3.3 https://git.openembedded.org/bitbake
 source ./bitbake-builds/mydistro-wrynose/build/init-build-env
 bitbake mydistro-image
 runqemu nographic ./tmp/deploy/images/qemux86-64/mydistro-image-qemux86-64.rootfs.ext4
+# it can be run with kvm and libvirt in a VM window in virt-viewer, see at the end of this README.md
 ```
 
 ## SBOM and CVEs
@@ -81,4 +82,25 @@ mydistro-image-qemux86-64.rootfs.spdx.json
 bitbake -g mydistro-image
 # result files: pn-buildlist, task-depends.dot
 ```
+
+## How to run the built yocto in virt-viewer as a KVM VM
+
+virt-install \
+  --connect qemu:///system \
+  --name my-yocto-vm \
+  --ram 2048 \
+  --vcpus 2 \
+  --os-variant debian13 \
+  --import \
+  --disk path=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/deploy/images/qemux86-64/mydistro-image-qemux86-64.rootfs.ext4,format=raw,bus=virtio \
+  --network bridge=virbr0 \
+  --boot kernel=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/deploy/images/qemux86-64/bzImage,initrd=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/work/qemux86_64-oe-linux/linux-kernel7/7.0.3/build/usr/initramfs_data.cpio,kernel_args="root=/dev/vda rw console=tty0 earlyprintk=serial" \
+  --graphics spice \
+  --video virtio
+
+Shift + F12 can ungrab the keyboard the Windows key to change window.
+
+virsh --connect qemu:///system start my-yocto-vm
+virsh --connect qemu:///system destroy my-yocto-vm
+virsh --connect qemu:///system undefine my-yocto-vm --nvram
 
