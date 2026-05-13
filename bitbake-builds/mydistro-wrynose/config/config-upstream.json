@@ -157,6 +157,13 @@
                     "rev": "wrynose",
                     "uri": "https://git.yoctoproject.org/yocto-docs"
                 }
+            },
+            "meta-erlang": {
+                "git-remote": {
+                    "branch": "master",
+                    "rev": "d2ac5e85b466ece537c867b1835c0d8625c3ec2c",
+                    "uri": "https://github.com/meta-erlang/meta-erlang.git"
+                }
             }
         },
         "version": "1.0"
