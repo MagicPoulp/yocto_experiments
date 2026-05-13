@@ -98,6 +98,11 @@ virt-install \
   --graphics spice \
   --video virtio
 
+
+or --graphics none (RECOMMENDED)
+Then CTRL + ] (Altgr + 9) can leave that shell window to allow a destroy and undefined
+
+with virtio,
 Shift + F12 can ungrab the keyboard the Windows key to change window.
 
 virsh --connect qemu:///system start my-yocto-vm
