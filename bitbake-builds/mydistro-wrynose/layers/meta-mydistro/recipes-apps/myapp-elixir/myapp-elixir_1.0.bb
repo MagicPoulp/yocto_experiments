@@ -6,7 +6,7 @@ RDEPENDS:${PN} += "erlang elixir"
 
 SRC_URI = "file://hello.ex"
 
-S = "${UNPACKDIR}/sources-unpack"
+S = "${UNPACKDIR}"
 
 do_install() {
     # Create /usr/bin on the target filesystem

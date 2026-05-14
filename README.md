@@ -125,3 +125,10 @@ source ./bitbake-builds/mydistro-wrynose/build/init-build-env
 
 Then add the layer to bitbake-builds/mydistro-wrynose/build/conf/bblayers.conf
 
+## How to update the patches for the meta-erlang layer
+
+```
+devtool modify erlang
+devtool finish --force-patch-refresh erlang \
+  /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/layers/openembedded-core/meta-erlang
+```
