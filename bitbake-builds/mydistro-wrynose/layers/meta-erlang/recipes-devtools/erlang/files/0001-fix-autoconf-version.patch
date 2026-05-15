@@ -1,0 +1,8 @@
+Upstream-Status: Inappropriate [configuration]
+---
+
+--- a/otp_build
++++ b/otp_build
+@@ -1,1 +1,1 @@
+-USE_AUTOCONF_VERSION=2.72
++USE_AUTOCONF_VERSION=2.73

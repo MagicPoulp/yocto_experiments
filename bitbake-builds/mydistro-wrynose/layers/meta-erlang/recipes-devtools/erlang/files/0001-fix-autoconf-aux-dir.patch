@@ -1,0 +1,8 @@
+Upstream-Status: Inappropriate [configuration]
+---
+
+--- a/erts/configure.ac
++++ b/erts/configure.ac
+@@ -1,1 +1,1 @@
+-AC_CONFIG_AUX_DIR([${ERL_TOP}/make/autoconf])
++AC_CONFIG_AUX_DIR([../make/autoconf])

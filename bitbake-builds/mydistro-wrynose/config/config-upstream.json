@@ -158,11 +158,11 @@
                     "uri": "https://git.yoctoproject.org/yocto-docs"
                 }
             },
-            "meta-erlang": {
+            "meta-openembedded": {
                 "git-remote": {
-                    "branch": "master",
-                    "rev": "d2ac5e85b466ece537c867b1835c0d8625c3ec2c",
-                    "uri": "https://github.com/meta-erlang/meta-erlang.git"
+                    "branch": "wrynose",
+                    "rev": "wrynose",
+                    "uri": "https://git.openembedded.org/meta-openembedded"
                 }
             }
         },

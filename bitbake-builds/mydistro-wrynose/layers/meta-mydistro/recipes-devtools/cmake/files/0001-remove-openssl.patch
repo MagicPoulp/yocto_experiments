@@ -1,0 +1,7 @@
+Upstream-Status: Inappropriate [configuration]
+---
+
+--- a/Utilities/cmThirdParty.h.in
++++ b/Utilities/cmThirdParty.h.in
+@@ -22,1 +22,0 @@
+-#cmakedefine CMAKE_USE_OPENSSL

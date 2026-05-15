@@ -1,0 +1,10 @@
+Upstream-Status: Inappropriate [configuration]
+---
+
+--- a/erts/crypto.ac
++++ b/erts/crypto.ac
+@@ -211,2 +211,4 @@
++#define OPENSSL_EXTRA
++#define WOLFSSL_OPENSSH
+ #include <openssl/opensslv.h>
+ #if OPENSSL_VERSION_NUMBER >= 0x0090803fL
