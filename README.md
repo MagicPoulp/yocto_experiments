@@ -132,3 +132,11 @@ devtool modify erlang
 devtool finish --force-patch-refresh erlang \
   /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/layers/openembedded-core/meta-erlang
 ```
+
+# how to create an SDK for erlang
+
+~/Documents/yocto/bitbake-builds/mydistro-wrynose/build$ cd tmp/work/x86-64-v3-oe-linux/erlang/29.0/sources/otp_src_29.0
+export PATH="$(realpath ../../recipe-sysroot-native/usr/bin):$PATH"
+
+#how to list files in a package
+oe-pkgdata-util list-pkg-files erlang | grep bin/erl

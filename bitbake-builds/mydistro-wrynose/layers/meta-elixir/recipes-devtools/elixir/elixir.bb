@@ -1,7 +1,9 @@
 SUMMARY = "Elixir a wrapper language over erlang"
 DESCRIPTION = "Elixir a wrapper language over erlang"
 HOMEPAGE = "https://github.com/elixir-lang/elixir"
-LICENSE = "MIT"
+LICENSE = "Apache-2.0"
+# https://github.com/elixir-lang/elixir/blob/main/LICENSE
+
 # Note: Ensure the checksum matches the LICENSE file in the source root
 LIC_FILES_CHKSUM = "file://LICENSE;md5=e23fadd6ceef8c618fc1c65191d846fa"
 
@@ -12,8 +14,12 @@ SRC_URI[sha256sum] = "10750b8bd74b10ac1e25afab6df03e3d86999890fa359b5f02aa81de18
 
 PV = "${ELIXIR_VERSION}"
 
+BBCLASSEXTEND = "native"
+
 # Elixir is built on top of Erlang
 DEPENDS = "erlang erlang-native"
+# erlang must be present at runtime — elixir shells out to erl
+RDEPENDS:${PN} = "erlang"
 
 # Elixir's Makefile does not support parallel builds reliably
 PARALLEL_MAKE = ""
@@ -40,6 +46,8 @@ do_install() {
             ln -sf ${libdir}/elixir/bin/${bin} ${D}${bindir}/${bin}
         fi
     done
+
+    rm -rf ${D}${libdir}/elixir/lib/elixir/scripts/windows_installer
 }
 
 FILES:${PN} = " \
@@ -50,4 +58,5 @@ FILES:${PN} = " \
     ${libdir}/elixir \
 "
 
-BBCLASSEXTEND = "native"
+#TODO: debug to remove this
+INSANE_SKIP:${PN} += "buildpaths"
