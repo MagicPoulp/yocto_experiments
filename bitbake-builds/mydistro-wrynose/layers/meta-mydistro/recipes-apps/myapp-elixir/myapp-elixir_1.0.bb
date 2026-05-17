@@ -1,53 +1,96 @@
-SUMMARY = "My Elixir application"
-LICENSE = "CLOSED"
+#Before the Yocto build this should be run locally.
+#Networking to get dependencies is not allowed for security in a Yocto build.
+#mix deps.get --only prod
+#tar -czvf supervision-platform-deps.tar.gz deps/
 
-DEPENDS = "erlang elixir"
+SUMMARY = "A supervision platform that restarts a process if it crashes"
+LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://LICENSE.txt;md5=8fe15be9c1355b986d0901a0fc1bf691"
+
+DEPENDS = "erlang elixir erlang-native elixir-native libcap"
 RDEPENDS:${PN} += "erlang elixir"
+WORKER_APPS = " \
+myapp-cpp \
+"
+RDEPENDS:${PN} += "${WORKER_APPS}"
 
-SRC_URI = "file://hello.ex"
+# Inherit chrpath to natively clear host RPATHs from compiled binaries safely
+inherit chrpath
 
-S = "${UNPACKDIR}"
+FILESEXTRAPATHS:prepend := "${THISDIR}/..:"
+SRC_URI = " \
+    file://supervision-platform-repo \
+    file://supervision-platform-repo/supervision-platform-deps.tar.gz \
+"
 
-do_install() {
-    # Create /usr/bin on the target filesystem
-    install -d ${D}${bindir}
+S = "${UNPACKDIR}/supervision-platform-repo"
 
-    # Copy the file to /usr/bin/hello.ex
-    install -m 0644 ${UNPACKDIR}/hello.ex ${D}${bindir}/hello.ex
+do_configure() {
+    if [ -d "${UNPACKDIR}/deps" ]; then
+        cp -r ${UNPACKDIR}/deps ${S}/
+    else
+        bbfatal "The unpacked 'deps' folder was not found. Ensure you archived it correctly."
+    fi
 }
 
-FILES:${PN} += "${bindir}/hello.ex"
+do_compile() {
+    cd ${S}
 
-# Point to your app source
-#SRC_URI = "git://github.com/yourname/myapp.git;branch=main;protocol=https"
-#SRCREV = "abc123yourgitcommithash"
+    export MIX_ENV="prod"
+    export HEX_OFFLINE=1
+    export MIX_REBAR3="${STAGING_BINDIR_NATIVE}/rebar3"
+    export ERL_EI_LIBDIR="${STAGING_LIBDIR_NATIVE}/erlang/lib/erl_interface/lib"
+    export ERL_EI_INCLUDE_DIR="${STAGING_LIBDIR_NATIVE}/erlang/lib/erl_interface/include"
+    export ERL_LDFLAGS="-lcap"
 
-#S = "${UNPACKDIR}/git"
+    bbnote "Surgically purging runtime_tools references with syntax safety guards..."
 
-#inherit mix   # provided by meta-erlang
+    # 1. Clean Elixir mix.exs files using precise syntax matching
+    find . -type f -name "mix.exs" | while read -r file; do
+        sed -E -i 's/runtime_tools\s*:\s*:[a-zA-Z0-9_]+\s*,\s*//g' "$file"
+        sed -E -i 's/,\s*runtime_tools\s*:\s*:[a-zA-Z0-9_]+//g' "$file"
+        sed -E -i 's/\[\s*runtime_tools\s*:\s*:[a-zA-Z0-9_]+\s*\]/\[\]/g' "$file"
 
-# Hex dependencies must be pre-fetched
-# Run this locally first to generate the lockfile:
-# mix deps.get && mix deps.compile
-#MIX_ENV = "prod"
+        sed -E -i 's/:runtime_tools\s*,\s*//g' "$file"
+        sed -E -i 's/,\s*:runtime_tools//g' "$file"
+        sed -E -i 's/\[\s*:runtime_tools\s*\]/\[\]/g' "$file"
+    done
 
-#do_compile() {
-#    cd ${S}
-#    mix local.hex --force
-#    mix local.rebar --force
-#    mix deps.get --only prod
-#    mix release --overwrite
-#}
+    # 2. Clean Erlang app configurations safely (standard comma-separated terms)
+    find . -type f \( -name "*.app" -o -name "*.app.src" \) | while read -r file; do
+        sed -E -i 's/runtime_tools\s*,\s*//g' "$file"
+        sed -E -i 's/,\s*runtime_tools//g' "$file"
+        sed -E -i 's/\[\s*runtime_tools\s*\]/\[\]/g' "$file"
+    done
 
-#do_install() {
-#    install -d ${D}${bindir}
-#    install -d ${D}/opt/myapp
+    # Build steps
+    mix deps.compile --no-deps-check
+    mix compile --no-deps-check
+    mix release --overwrite --no-deps-check
+}
 
-# Install the release
-#    cp -r ${S}/_build/prod/rel/myapp/* ${D}/opt/myapp/
+do_install() {
+    install -d ${D}/opt/supervision_platform
 
-#    # Symlink the start script to PATH
-#    ln -sf /opt/myapp/bin/myapp ${D}${bindir}/myapp
-#}
+    if [ -d ${S}/_build/prod/rel/ems ]; then
+        cp -r ${S}/_build/prod/rel/ems/* ${D}/opt/supervision_platform/
+        LN_TARGET="ems"
+    else
+        cp -r ${S}/_build/prod/rel/supervision_platform/* ${D}/opt/supervision_platform/
+        LN_TARGET="supervision_platform"
+    fi
 
-#FILES:${PN} += "/opt/myapp"
+    install -d ${D}${bindir}
+    ln -rs ${D}/opt/supervision_platform/bin/${LN_TARGET} ${D}${bindir}/supervision_platform
+
+    # Clean native fix: Clear out hostile build paths from the target directory before packaging QA runs
+    chrpath --delete ${D}/opt/supervision_platform/lib/*/priv/lib/*/*.so || true
+}
+
+FILES:${PN} += " \
+    /opt/supervision_platform \
+    ${bindir} \
+"
+
+INSANE_SKIP:${PN} += "buildpaths"
+INSANE_SKIP:${PN}-dbg += "buildpaths"

@@ -1,0 +1,23 @@
+{
+  "version": "3.0",
+  "user": "Schneider_beginner",
+  "dateGenerated": "2024-07-01T14:47:50Z",
+  "status": "OK",
+  "data": [
+    {
+      "parameter": "precip_1h:mm",
+      "coordinates": [
+        {
+          "lat": 43.59152,
+          "lon": 3.934591,
+          "dates": [
+            {
+              "date": "2024-07-01T14:00:00Z",
+              "value": 30.5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -28,23 +28,28 @@ BBCLASSEXTEND = "native"
 # Required utilities and libraries mentioned in the docs
 DEPENDS = "zlib perl-native openssl"
 DEPENDS:append:class-target = " erlang-native"
+# needed for chrpath, to prevent a warning that says native builds skip standard RPATH paths (/usr/lib, ...)
+DEPENDS += "chrpath-native"
 
 # Configuration options derived from the erlang documentation
 # https://www.erlang.org/doc/system/install.html
 SSL_SYSROOT_PATH = "${STAGING_DIR_HOST}${prefix}"
 SSL_SYSROOT_PATH:class-native = "${STAGING_DIR_NATIVE}${prefix_native}"
 EXTRA_OECONF = " \
-    --enable-jit \
-    --without-javac \
-    --without-wx \
-    --disable-kernel-poll \
-    --disable-saved-compile-time \
-    --enable-pie \
-    --enable-builtin-ryu \
-    --enable-ei-dynamic-lib \
-    --without-termcap \
-    --with-ssl=${SSL_SYSROOT_PATH} \
-    --disable-static \
+--enable-jit \
+--without-javac \
+--without-wx \
+--disable-kernel-poll \
+--disable-saved-compile-time \
+--enable-pie \
+--enable-builtin-ryu \
+--enable-ei-dynamic-lib \
+--without-termcap \
+--with-ssl=${SSL_SYSROOT_PATH} \
+"
+# --disable-static is standard practice in production (reduce RAM, or for auditing dependencies)
+EXTRA_OECONF:append = " \
+--disable-static \
 "
 # Force Yocto to pass the path of the native erlc tool into the target configuration
 EXTRA_OECONF:append:class-target = " \
@@ -95,28 +100,22 @@ PATH:prepend:class-target = "${STAGING_BINDIR_NATIVE}:"
 
 # best practice to use the yocto flags to build custom makefiles
 EXTRA_OEMAKE:class-target = " \
-    'CC=${CC}' \
-    'LD=${LD}' \
-    'CC_FOR_BUILD=${BUILD_CC}' \
-    'CFLAGS_FOR_BUILD=${BUILD_CFLAGS}' \
-    'ERLC=${STAGING_BINDIR_NATIVE}/erlc' \
-    'YCF_EXECUTABLE_PATH=${S}/erts/lib_src/yielding_c_fun/bin/x86_64-pc-linux-gnu/yielding_c_fun' \
+'CC=${CC}' \
+'LD=${LD}' \
+'CC_FOR_BUILD=${BUILD_CC}' \
+'CFLAGS_FOR_BUILD=${BUILD_CFLAGS}' \
+'ERLC=${STAGING_BINDIR_NATIVE}/erlc' \
+'YCF_EXECUTABLE_PATH=${S}/erts/lib_src/yielding_c_fun/bin/x86_64-pc-linux-gnu/yielding_c_fun' \
 "
 # raw ld does not understand yocto flags
 EXTRA_OEMAKE:class-native = " \
-    'CC=${CC}' \
+'CC=${CC}' \
 "
 
 EXTRA_OECONF += " \
-    --host=${HOST_SYS} \
-    --build=${BUILD_SYS} \
+--host=${HOST_SYS} \
+--build=${BUILD_SYS} \
 "
-
-# The CFLAGS debug remapping flags (-ffile-prefix-map=...=/usr/src/debug/...)
-# contain /usr/ literally and trigger a false positive in configure-unsafe QA.
-# The actual sysroot paths are all correct.
-INSANE_SKIP:${PN} += "configure-unsafe"
-INSANE_SKIP:${PN}-dev += "configure-unsafe"
 
 do_buildclean() {
     bbnote "Skipping default do_buildclean to protect workspace from erlc missing errors"
@@ -302,38 +301,13 @@ do_compile() {
     export CC_FOR_BUILD="${BUILD_CC}"
     export CFLAGS_FOR_BUILD="${BUILD_CFLAGS}"
     # we build the profile OTP_SMALL_BUILD, the default recommended choice
-    ./otp_build boot -s
+    ./otp_build boot -a
 }
 
 do_install() {
     cd ${S}
     # We pass ${D} as the first argument ($1), which becomes RELEASE_ROOT.
-    # no need of -s according to the documentation
-    ./otp_build release ${D}
-}
-
-do_install:append:class-native() {
-    install -d ${D}${bindir}
-
-    # Binaries: live under erts-VERSION/bin/ in the image
-    for tool in erlc erlexec escript; do
-        src=$(find ${D} -path "*/erts-*/bin/${tool}" | head -1)
-        if [ -n "$src" ] && [ -f "$src" ]; then
-            install -m 0755 "$src" ${D}${bindir}/${tool}
-            bbnote "Staged native ${tool} from $src"
-        else
-            bbwarn "Native ${tool} not found under ${D}"
-        fi
-    done
-
-    # erl is a shell script wrapper, otp_build release doesn't install it
-    # copy directly from the build source tree instead
-    if [ -f ${S}/bin/erl ]; then
-        install -m 0755 ${S}/bin/erl ${D}${bindir}/erl
-        bbnote "Staged native erl from ${S}/bin/erl"
-    else
-        bbwarn "Native erl not found at ${S}/bin/erl"
-    fi
+    ./otp_build release -a ${D}
 }
 
 do_install:append() {
@@ -352,17 +326,133 @@ do_install:append() {
         rm -rf "$d"
     done
     # Remove include dirs from lib (keep erts includes for dev package)
-    find ${D}/lib -name "include" -type d | while read d; do
-        rm -rf "$d"
-    done
+    #find ${D}/lib -name "include" -type d | while read d; do
+    #    rm -rf "$d"
+    #done
 
     find ${D} -name "src" -type d -exec rm -rf {} + 2>/dev/null || true
     find ${D} -name "doc" -type d -exec rm -rf {} + 2>/dev/null || true
     find ${D} -name "man" -type d -exec rm -rf {} + 2>/dev/null || true
-    find ${D}/lib -name "include" -type d -exec rm -rf {} + 2>/dev/null || true
+    rm -rf ${D}/usr/include 2>/dev/null || true
+    #find ${D}/lib -name "include" -type d -exec rm -rf {} + 2>/dev/null || true
 
     # yielding_c_fun is a host build tool — wrong RPATH, must not ship to target
-    find ${D} -name "yielding_c_fun" -delete
+    find ${D} -name "yielding_c_fun" -type f -delete 2>/dev/null || true
+}
+
+do_install:append:class-native() {
+    install -d ${D}${bindir}
+    install -d ${D}${libdir}/erlang/lib
+
+    # otp_build release -a ${D} writes versioned libs to ${D}/lib/
+    # (e.g. runtime_tools-2.4, kernel-10.1, etc.)
+    # Copy from there — NOT from ${S}/release/lib which is the unversioned bootstrap
+    if [ -d ${D}/lib ]; then
+        cp -a ${D}/lib/. ${D}${libdir}/erlang/lib/
+        bbnote "Staged versioned OTP lib tree from ${D}/lib"
+    else
+        bbwarn "${D}/lib not found — falling back to ${S}/release/lib (unversioned!)"
+        cp -a ${S}/release/lib ${D}${libdir}/erlang/
+    fi
+
+    # Sanity check
+    if ls ${D}${libdir}/erlang/lib/runtime_tools-* 1>/dev/null 2>&1; then
+        bbnote "runtime_tools versioned dir confirmed in native sysroot"
+    else
+        bbfatal "runtime_tools versioned dir STILL missing — mix compile will fail"
+    fi
+
+    # Binaries: live under erts-VERSION/bin/ in the image
+    for tool in erlc erlexec escript; do
+        src=$(find ${D} -path "*/erts-*/bin/${tool}" | head -1)
+        if [ -n "$src" ] && [ -f "$src" ]; then
+            install -m 0755 "$src" ${D}${bindir}/${tool}
+            bbnote "Staged native ${tool} from $src"
+        else
+            bbwarn "Native ${tool} not found under ${D}"
+        fi
+    done
+
+    # erl shell wrapper
+    if [ -f ${S}/bin/erl ]; then
+        install -m 0755 ${S}/bin/erl ${D}${bindir}/erl
+        bbnote "Staged native erl from ${S}/bin/erl"
+    else
+        bbwarn "Native erl not found at ${S}/bin/erl"
+    fi
+
+    # install the full Erlang lib tree so NIFs (crypto.so etc.) are available ──
+    install -d ${D}${libdir}/erlang
+
+    # Rather than copying selected libs, copy everything compiled under the release directory
+    if [ -d ${S}/release ]; then
+        cp -a ${S}/release/lib   ${D}${libdir}/erlang/
+        cp -a ${S}/release/erts* ${D}${libdir}/erlang/ || true
+    elif [ -d ${S}/lib ]; then
+        # Fallback if release structure is different
+        cp -a ${S}/lib          ${D}${libdir}/erlang/
+        cp -a ${S}/erts         ${D}${libdir}/erlang/
+    fi
+
+    # Also set ERL_ROOT so erl/erlc find libs without ERL_LIBS being set manually
+    # Generate a small env wrapper consumed by the native erl script
+    ERTS_VSN=$(ls ${D}${libdir}/erlang/ | grep erts | head -1)
+    bbnote "Native ERTS version: ${ERTS_VSN}"
+
+    # Force copy the static files so host mix builds can find them
+    # inside erlang-native sysroot components later
+    install -d ${D}${libdir}/erlang/lib/erl_interface/lib/
+
+    if [ -f ${S}/lib/erl_interface/obj/x86_64-pc-linux-gnu/libei.a ]; then
+        cp ${S}/lib/erl_interface/obj/x86_64-pc-linux-gnu/libei.a ${D}${libdir}/erlang/lib/erl_interface/lib/
+        cp ${S}/lib/erl_interface/obj/x86_64-pc-linux-gnu/libei_st.a ${D}${libdir}/erlang/lib/erl_interface/lib/
+    fi
+
+    # Install libei dynamic libraries to ${libdir} so -lei resolves correctly
+    # when mix/rebar3 compiles NIFs against the native erlang
+    for sofile in $(find ${D}${libdir}/erlang -name "libei.so*" -o -name "libei_st.so*" 2>/dev/null); do
+        install -m 0755 "$sofile" ${D}${libdir}/
+    done
+
+    # Fallback: also search the release tree directly
+    for sofile in $(find ${S}/release -name "libei.so*" -o -name "libei_st.so*" 2>/dev/null); do
+        install -m 0755 "$sofile" ${D}${libdir}/
+    done
+
+    # Install static libei to ${libdir} so host `mix test` / rebar resolves -lei
+    # (mirrors the .so install loop above it)
+    for afile in $(find ${D}${libdir}/erlang -name "libei.a" -o -name "libei_st.a" 2>/dev/null); do
+        install -m 0644 "$afile" ${D}${libdir}/
+        bbnote "Staged native static lib $(basename $afile) from $afile"
+    done
+
+    # OTP 29 puts libei under an arch-tuple subdir but code:lib_dir(erl_interface, lib)
+    # returns the parent dir — symlink up so -L resolves without arch subdir
+    EI_LIB="${S}/lib/erl_interface/lib"
+    for arch_dir in ${EI_LIB}/*/; do
+        for f in "${arch_dir}"libei*; do
+            [ -f "$f" ] || continue
+            ln -sf "$(basename ${arch_dir})/$(basename $f)" "${EI_LIB}/$(basename $f)"
+            bbnote "Symlinked $(basename $f) into ${EI_LIB}/"
+        done
+    done
+
+    # Strip standard paths from RPATH in native .so files to silence Yocto warnings
+    find ${D} -name "*.so" -o -name "*.so.*" | while read so; do
+        if chrpath "$so" 2>/dev/null | grep -qE '(/usr/lib64|/usr/lib\b|/lib\b)'; then
+            chrpath -d "$so" 2>/dev/null || true
+        fi
+    done
+
+    if [ -f ${S}/bin/erl ]; then
+        install -m 0755 ${S}/bin/erl ${D}${bindir}/erl
+        # ROOTDIR in the script points to the build tmpdir — fix it to the staged lib path
+        sed -i "s|^ROOTDIR=.*|ROOTDIR=${D}${libdir}/erlang|g" ${D}${bindir}/erl
+        bbnote "Rewrote ROOTDIR in native erl to: ${D}${libdir}/erlang"
+        bbnote "Resulting ROOTDIR line: $(grep '^ROOTDIR=' ${D}${bindir}/erl)"
+    else
+        bbwarn "Native erl not found at ${S}/bin/erl"
+    fi
 }
 
 do_install:append:class-target() {
@@ -412,45 +502,59 @@ do_install:append:class-target() {
     if [ -f ${D}/releases/29/erts-17.0/bin/erlexec ]; then
         ln -sf /releases/29/erts-17.0/bin/erlexec ${D}${bindir}/erlexec
     fi
+
+    # libei dynamic libs are only needed for native (NIF compilation),
+    # not on the production target — remove them to avoid QA errors
+    rm -f ${D}${libdir}/libei.so* ${D}${libdir}/libei_st.so*
 }
 
-# Runtime — everything needed on target
 FILES:${PN} = " \
     ${bindir}/erl \
     ${bindir}/erlang \
     ${bindir}/erlc \
     ${bindir}/escript \
     ${bindir}/erlexec \
-    /releases \
     /releases/29 \
+    /releases/RELEASES.src \
     /releases/29/lib/*/ebin \
     /releases/29/lib/*/priv \
     /releases/29/lib/common_test-*/proper_ext \
     /releases/29/lib/tools-*/emacs \
-    /bin \
     /Install \
     /misc \
 "
 
-# Headers for cross-compilation/development
 FILES:${PN}-dev = " \
     /releases/29/erts-17.0/include \
-    /usr/include \
+    ${includedir} \
 "
 
-# Static libraries
 FILES:${PN}-staticdev = " \
+    ${libdir}/libei.a \
+    ${libdir}/libei_st.a \
+    ${libdir}/erlang/lib/erl_interface-*/lib/libei.a \
+    ${libdir}/erlang/lib/erl_interface-*/lib/libei_st.a \
+    /releases/29/lib/erl_interface-*/lib/libei.a \
+    /releases/29/lib/erl_interface-*/lib/libei_st.a \
     /releases/29/erts-17.0/lib/internal/*.a \
 "
 
-ALLOW_EMPTY:${PN}-dev = "1"
-ALLOW_EMPTY:${PN}-staticdev = "1"
-
 # Skip QA checks that are false positives or inherent to Erlang's install layout
-# buildpaths: beam files from .yrl parsers embed source paths (harmless)
-# usrmerge: otp_build release uses a flat layout not under /usr by design
-# libdir: Erlang priv/lib .so files are loaded via Erlang, not ldconfig
+#
+# --> buildpaths: compiled beam files embed source paths by design for error reporting
+#
+# --> usrmerge: otp_build release uses a flat layout not under /usr by design
+# otp_build release produces a self-contained OTP release tree rooted at whatever you pass it
+#
+# --> libdir: Erlang priv/lib .so files are loaded via Erlang, not ldconfig
+# Erlang NIFs (.so files under priv/) are loaded via erlang:load_nif/2 at runtime,
+# bypassing ldconfig entirely — so the libdir check firing on those is genuinely a false positive
+# However, if you have actual shared libraries (like libei.so) that should be in a standard libdir,
+# the skip would mask a real problem
+# Your recipe installs libei.so files and then removes them for the target with
+# rm -f ${D}${libdir}/libei.so* — so skipping libdir on the target package is fine in practice
 INSANE_SKIP:${PN} += "buildpaths usrmerge libdir"
 INSANE_SKIP:${PN}-dbg += "buildpaths usrmerge libdir"
-# TODO even if in -dev try to remove this
-INSANE_SKIP:${PN}-dev += "configure-unsafe"
+# RPATH warnings on standard paths are expected for native .so files (crypto NIF, test engine)
+# Yocto correctly strips these — the warnings are false positives
+INSANE_SKIP:${PN}:class-native += "rpaths"

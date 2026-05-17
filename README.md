@@ -4,13 +4,15 @@ Thierry Vilmart
 
 2026
 
-## Poky version
+## Summary
 
 The Yocto build was made to work with 2 different poky versions.
 
 - scarthgap 5.0 (LTS), on the branch tag v1.0-scarthgap
 
 - the new wrynose 6.0 (LTS) that will be released in the first week of May 2026
+
+- a failover mechanism is demonstrated by deploying Elixir/Erlang. See the screenshot at the bottom of this file.
 
 The version 6.0 is useful for using Rust and avoid memory leaks. It is also useful to have a better dependencies SBOM report and CVE vulnerabilities report. Version 6 had a more modern toolchain and it uses UNPACKDIR for cleaner builds with less bugs.
 
@@ -85,6 +87,7 @@ bitbake -g mydistro-image
 
 ## How to run the built yocto in virt-viewer as a KVM VM
 
+```
 virt-install \
   --connect qemu:///system \
   --name my-yocto-vm \
@@ -97,7 +100,7 @@ virt-install \
   --boot kernel=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/deploy/images/qemux86-64/bzImage,initrd=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/work/qemux86_64-oe-linux/linux-kernel7/7.0.3/build/usr/initramfs_data.cpio,kernel_args="root=/dev/vda rw console=tty0 earlyprintk=serial" \
   --graphics spice \
   --video virtio
-
+```
 
 or --graphics none (RECOMMENDED)
 Then CTRL + ] (Altgr + 9) can leave that shell window to allow a destroy and undefined
@@ -109,7 +112,29 @@ virsh --connect qemu:///system start my-yocto-vm
 virsh --connect qemu:///system destroy my-yocto-vm
 virsh --connect qemu:///system undefine my-yocto-vm --nvram
 
+## Demo of the failover mechanism using Elixir/Erlang
+
+```
+bitbake mydistro-image
+virt-install   --connect qemu:///system   --name my-yocto-vm   --ram 2048   --vcpus 2   --os-variant debian13   --import   --disk path=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/deploy/images/qemux86-64/mydistro-image-qemux86-64.rootfs.ext4,format=raw,bus=virtio   --network bridge=virbr0   --boot kernel=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/deploy/images/qemux86-64/bzImage,initrd=/home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/build/tmp/work/qemux86_64-oe-linux/linux-kernel7/7.0.3/build/usr/initramfs_data.cpio,kernel_args="root=/dev/vda rw console=tty0 earlyprintk=serial"   --nographics
+
+/opt/supervision_platform/bin/supervision_platform start
+
+virsh --connect qemu:///system destroy my-yocto-vm && virsh --connect qemu:///system undefine my-yocto-vm --nvram
+
+and also "mix test" to run the random tests in here
+bitbake-builds/mydistro-wrynose/layers/meta-mydistro/recipes-apps/supervision-platform-repo
+```
+
+## Failover mechanism using Elixir/Erlang
+
+The failover mechanism is demonstrated here. After a crash, another worker is started.
+
+![The failover mechanism is demonstrated here](screenshots/failover_demo.png)
+
 ## How to add the meta-erlang layer
+
+The meta-layer erlang is not used here. I made my own layer, but the steps to clone a layer and add ir are given here.
 
 Add erlang-meta to "sources" in
 bitbake-builds/mydistro-wrynose/config/config-upstream.json
@@ -133,10 +158,14 @@ devtool finish --force-patch-refresh erlang \
   /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/layers/openembedded-core/meta-erlang
 ```
 
-# how to create an SDK for erlang
+## how to create an SDK for erlang
 
 ~/Documents/yocto/bitbake-builds/mydistro-wrynose/build$ cd tmp/work/x86-64-v3-oe-linux/erlang/29.0/sources/otp_src_29.0
 export PATH="$(realpath ../../recipe-sysroot-native/usr/bin):$PATH"
 
 #how to list files in a package
 oe-pkgdata-util list-pkg-files erlang | grep bin/erl
+
+## Yocto manual
+
+https://docs.yoctoproject.org/6.0/ref-manual/classes.html
