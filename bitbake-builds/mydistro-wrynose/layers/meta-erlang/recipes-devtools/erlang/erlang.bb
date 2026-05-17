@@ -498,13 +498,18 @@ FILES:${PN}-staticdev = " \
 "
 
 # Skip QA checks that are false positives or inherent to Erlang's install layout
-# buildpaths: beam files from .yrl parsers embed source paths (harmless)
-# usrmerge: otp_build release uses a flat layout not under /usr by design
-# libdir: Erlang priv/lib .so files are loaded via Erlang, not ldconfig
+#
+# --> buildpaths: compiled beam files embed source paths by design for error reporting
+#
+# --> usrmerge: otp_build release uses a flat layout not under /usr by design
+# otp_build release produces a self-contained OTP release tree rooted at whatever you pass it
+#
+# --> libdir: Erlang priv/lib .so files are loaded via Erlang, not ldconfig
+# Erlang NIFs (.so files under priv/) are loaded via erlang:load_nif/2 at runtime,
+# bypassing ldconfig entirely — so the libdir check firing on those is genuinely a false positive
+# However, if you have actual shared libraries (like libei.so) that should be in a standard libdir,
+# the skip would mask a real problem
+# Your recipe installs libei.so files and then removes them for the target with
+# rm -f ${D}${libdir}/libei.so* — so skipping libdir on the target package is fine in practice
 INSANE_SKIP:${PN} += "buildpaths usrmerge libdir"
 INSANE_SKIP:${PN}-dbg += "buildpaths usrmerge libdir"
-# The CFLAGS debug remapping flags (-ffile-prefix-map=...=/usr/src/debug/...)
-# contain /usr/ literally and trigger a false positive in configure-unsafe QA.
-# The actual sysroot paths are all correct.
-INSANE_SKIP:${PN} += "configure-unsafe"
-INSANE_SKIP:${PN}-dev += "configure-unsafe"

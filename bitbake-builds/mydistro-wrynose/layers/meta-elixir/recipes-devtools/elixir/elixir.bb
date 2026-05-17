@@ -40,14 +40,26 @@ do_install() {
     cp -r ${S}/lib ${D}${libdir}/elixir/
     cp -r ${S}/bin ${D}${libdir}/elixir/
 
-    # Symlink executables into bindir
+    # Symlink executables into bindir using a RELATIVE path
+    # From /usr/bin → ../lib/elixir/bin/<bin>
     for bin in elixir elixirc iex mix; do
         if [ -f ${D}${libdir}/elixir/bin/${bin} ]; then
-            ln -sf ${libdir}/elixir/bin/${bin} ${D}${bindir}/${bin}
+            ln -sf ../lib/elixir/bin/${bin} ${D}${bindir}/${bin}
         fi
     done
 
     rm -rf ${D}${libdir}/elixir/lib/elixir/scripts/windows_installer
+}
+
+do_install:append:class-target() {
+    # Strip libraries that are build/dev tools only,
+    # and that embed TMPDIR paths in all their beam files.
+    # ex_unit: test framework
+    # iex:     interactive shell
+    # mix:     build tool
+    rm -rf ${D}${libdir}/elixir/lib/ex_unit
+    rm -rf ${D}${libdir}/elixir/lib/iex
+    rm -rf ${D}${libdir}/elixir/lib/mix
 }
 
 FILES:${PN} = " \
@@ -58,5 +70,7 @@ FILES:${PN} = " \
     ${libdir}/elixir \
 "
 
-#TODO: debug to remove this
+# Skip QA checks that are false positives or inherent to Erlang's install layout
+# buildpaths: compiled beam files embed source paths by design for error reporting
 INSANE_SKIP:${PN} += "buildpaths"
+INSANE_SKIP:${PN}-dbg += "buildpaths"

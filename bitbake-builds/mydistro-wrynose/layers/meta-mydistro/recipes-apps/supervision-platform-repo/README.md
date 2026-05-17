@@ -20,3 +20,4 @@ Random JSONS are generated.
 
 mix deps.get
 mix test
+mix test test/rand_proper1_test.exs
