@@ -8,6 +8,12 @@ IMAGE_INSTALL = " \
     busybox \
 "
 
+IMAGE_INSTALL:append = " \
+    myapp-elixir \
+"
+
+# myapp-cpp
+
 # Lock down the image
 IMAGE_FEATURES  = "read-only-rootfs"
 IMAGE_FEATURES:remove = " \

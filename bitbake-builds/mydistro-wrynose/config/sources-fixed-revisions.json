@@ -3,7 +3,7 @@
         "bitbake": {
             "git-remote": {
                 "branch": "2.18",
-                "rev": "a2dd9be788274d9c7280be5b1be5eb5c3990cf54",
+                "rev": "0415a00658b59f66bdab22a3558794f238c42973",
                 "uri": "https://git.openembedded.org/bitbake"
             }
         },

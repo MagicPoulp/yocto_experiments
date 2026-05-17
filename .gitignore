@@ -29,6 +29,7 @@ bitbake-builds/site.conf
 bitbake-builds/*/build/conf/site.conf
 
 # Third-party layers (managed by bitbake-setup, not yours to version)
+bitbake-builds/*/layers/meta-openembedded
 bitbake-builds/*/layers/openembedded-core
 bitbake-builds/*/layers/meta-yocto
 bitbake-builds/*/layers/oe-scripts

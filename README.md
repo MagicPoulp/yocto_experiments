@@ -109,3 +109,34 @@ virsh --connect qemu:///system start my-yocto-vm
 virsh --connect qemu:///system destroy my-yocto-vm
 virsh --connect qemu:///system undefine my-yocto-vm --nvram
 
+## How to add the meta-erlang layer
+
+Add erlang-meta to "sources" in
+bitbake-builds/mydistro-wrynose/config/config-upstream.json
+
+Manually clone meta-openembedded because it won't pick https by default when using layerindex-fetch
+~/Documents/yocto/bitbake-builds/mydistro-wrynose/layers/openembedded-core/meta-openembedded$ git clone -b wrynose https://git.openembedded.org/meta-openembedded
+
+Then do a clone
+```
+source ./bitbake-builds/mydistro-wrynose/build/init-build-env
+./bitbake/bin/bitbake-layers layerindex-fetch -b master meta-erlang
+```
+
+Then add the layer to bitbake-builds/mydistro-wrynose/build/conf/bblayers.conf
+
+## How to update the patches for the meta-erlang layer
+
+```
+devtool modify erlang
+devtool finish --force-patch-refresh erlang \
+  /home/user/Documents/yocto/bitbake-builds/mydistro-wrynose/layers/openembedded-core/meta-erlang
+```
+
+# how to create an SDK for erlang
+
+~/Documents/yocto/bitbake-builds/mydistro-wrynose/build$ cd tmp/work/x86-64-v3-oe-linux/erlang/29.0/sources/otp_src_29.0
+export PATH="$(realpath ../../recipe-sysroot-native/usr/bin):$PATH"
+
+#how to list files in a package
+oe-pkgdata-util list-pkg-files erlang | grep bin/erl

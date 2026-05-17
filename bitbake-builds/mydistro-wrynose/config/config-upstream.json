@@ -157,6 +157,13 @@
                     "rev": "wrynose",
                     "uri": "https://git.yoctoproject.org/yocto-docs"
                 }
+            },
+            "meta-openembedded": {
+                "git-remote": {
+                    "branch": "wrynose",
+                    "rev": "wrynose",
+                    "uri": "https://git.openembedded.org/meta-openembedded"
+                }
             }
         },
         "version": "1.0"
