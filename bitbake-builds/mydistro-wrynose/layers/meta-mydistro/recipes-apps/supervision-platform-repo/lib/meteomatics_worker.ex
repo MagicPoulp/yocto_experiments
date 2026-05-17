@@ -2,6 +2,57 @@
 defmodule WeatherAcq.MeteomaticsWorker do
   alias WeatherAcq.JsonValidator, as: JsonValidator
 
+  @fake_json_raw """
+  {
+    "version": "3.0",
+    "user": "Schneider_beginner",
+    "dateGenerated": "2024-07-01T14:47:50Z",
+    "status": "OK",
+    "data": [
+      {
+        "parameter": "precip_1h:mm",
+        "coordinates": [
+          {
+            "lat": 43.59152,
+            "lon": 3.934591,
+            "dates": [
+              { "date": "2024-07-01T14:00:00Z", "value": 30.5 },
+              { "date": "2024-07-01T20:00:00Z", "value": 22.9 },
+              { "date": "2024-07-02T02:00:00Z", "value": 19.5 },
+              { "date": "2024-07-02T08:00:00Z", "value": 21.9 },
+              { "date": "2024-07-02T14:00:00Z", "value": 27.5 },
+              { "date": "2024-07-02T20:00:00Z", "value": 21.7 },
+              { "date": "2024-07-03T02:00:00Z", "value": 18.3 },
+              { "date": "2024-07-03T08:00:00Z", "value": 22.5 },
+              { "date": "2024-07-03T14:00:00Z", "value": 27.6 }
+            ]
+          }
+        ]
+      },
+      {
+        "parameter": "t_2m:C",
+        "coordinates": [
+          {
+            "lat": 43.59152,
+            "lon": 3.934591,
+            "dates": [
+              { "date": "2024-07-01T14:00:00Z", "value": 30.5 },
+              { "date": "2024-07-01T20:00:00Z", "value": 22.9 },
+              { "date": "2024-07-02T02:00:00Z", "value": 19.5 },
+              { "date": "2024-07-02T08:00:00Z", "value": 21.9 },
+              { "date": "2024-07-02T14:00:00Z", "value": 27.5 },
+              { "date": "2024-07-02T20:00:00Z", "value": 21.7 },
+              { "date": "2024-07-03T02:00:00Z", "value": 18.3 },
+              { "date": "2024-07-03T08:00:00Z", "value": 22.5 },
+              { "date": "2024-07-03T14:00:00Z", "value": 27.6 }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+  """
+
   def start_link() do
     pid = spawn_link(__MODULE__, :init, [])
     {:ok, pid}
@@ -9,19 +60,39 @@ defmodule WeatherAcq.MeteomaticsWorker do
 
   def init() do
     IO.puts "Start MeteomaticsWorker with pid #{inspect self()}"
-    worker_loop()
+    currentIndex = 0
+    worker_loop(currentIndex)
   end
 
-  def worker_loop() do
-    IO.puts("loop")
-    get_json()
-    :timer.sleep(5000)
-    worker_loop()
+  def worker_loop(currentIndex) do
+    IO.puts("\nloop: item index: #{currentIndex}")
+    next_index = get_json_fake(currentIndex)
+    :timer.sleep(3000)
+    #Pass the next index down to the next loop
+    worker_loop(next_index)
   end
-
 
   def build_videos_url(_opts \\ %{}) do
     "https://localhost:3000/api/items"
+  end
+
+  def get_json_fake(currentIndex, opts \\ %{}) do
+    rawJson = @fake_json_raw
+    decoded = Poison.decode!(rawJson)
+    JsonValidator.validate_json(decoded, :meteomatics_worker)
+    JsonValidator.validate_strings_for_sql_injection(decoded)
+    forecastPoints = create_forecast_points(decoded)
+    total_elements = length(forecastPoints)
+    if total_elements > 0 do
+      single_point = Enum.at(forecastPoints, currentIndex)
+      IO.inspect(single_point, label: "Point #{currentIndex}")
+
+      # Return the incremented index (wrapped around by total elements)
+      rem(currentIndex + 1, total_elements)
+    else
+      IO.puts("No forecast data found.")
+      0
+    end
   end
 
   def get_json(opts \\ %{}) do
@@ -32,6 +103,7 @@ defmodule WeatherAcq.MeteomaticsWorker do
       JsonValidator.validate_json(decoded, :meteomatics_worker)
       JsonValidator.validate_strings_for_sql_injection(decoded)
       forecastPoints = create_forecast_points(decoded)
+      IO.puts(forecastPoints)
       WeatherAcq.DbManager.store(forecastPoints)
     end
   end

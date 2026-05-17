@@ -8,7 +8,7 @@ LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE.txt;md5=8fe15be9c1355b986d0901a0fc1bf691"
 
 DEPENDS = "erlang elixir erlang-native elixir-native libcap"
-RDEPENDS:${PN} += "erlang elixir nodejs"
+RDEPENDS:${PN} += "erlang elixir"
 
 # Inherit chrpath to natively clear host RPATHs from compiled binaries safely
 inherit chrpath
@@ -40,13 +40,13 @@ do_compile() {
     export ERL_LDFLAGS="-lcap"
 
     bbnote "Surgically purging runtime_tools references with syntax safety guards..."
-    
+
     # 1. Clean Elixir mix.exs files using precise syntax matching
     find . -type f -name "mix.exs" | while read -r file; do
         sed -E -i 's/runtime_tools\s*:\s*:[a-zA-Z0-9_]+\s*,\s*//g' "$file"
         sed -E -i 's/,\s*runtime_tools\s*:\s*:[a-zA-Z0-9_]+//g' "$file"
         sed -E -i 's/\[\s*runtime_tools\s*:\s*:[a-zA-Z0-9_]+\s*\]/\[\]/g' "$file"
-        
+
         sed -E -i 's/:runtime_tools\s*,\s*//g' "$file"
         sed -E -i 's/,\s*:runtime_tools//g' "$file"
         sed -E -i 's/\[\s*:runtime_tools\s*\]/\[\]/g' "$file"
@@ -67,7 +67,7 @@ do_compile() {
 
 do_install() {
     install -d ${D}/opt/supervision-platform
-    
+
     if [ -d ${S}/_build/prod/rel/ems ]; then
         cp -r ${S}/_build/prod/rel/ems/* ${D}/opt/supervision-platform/
         LN_TARGET="ems"
@@ -81,6 +81,16 @@ do_install() {
 
     # Clean native fix: Clear out hostile build paths from the target directory before packaging QA runs
     chrpath --delete ${D}/opt/supervision-platform/lib/*/priv/lib/*/*.so || true
+
+    # testing using nodejs
+    # Explicitly install the node_server folder into /opt/supervision-platform/node_server
+    if [ -d ${S}/node_server ]; then
+        cp -r ${S}/node_server ${D}/opt/supervision-platform/
+        # Ensure proper read/execute permissions for Node.js assets
+        chmod -R 755 ${D}/opt/supervision-platform/node_server
+    else
+        bbfatal "Source node_server directory not found in ${S}"
+    fi
 }
 
 FILES:${PN} += " \
