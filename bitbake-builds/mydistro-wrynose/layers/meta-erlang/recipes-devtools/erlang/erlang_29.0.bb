@@ -28,6 +28,8 @@ BBCLASSEXTEND = "native"
 # Required utilities and libraries mentioned in the docs
 DEPENDS = "zlib perl-native openssl"
 DEPENDS:append:class-target = " erlang-native"
+# needed for chrpath, to prevent a warning that says native builds skip standard RPATH paths (/usr/lib, ...)
+DEPENDS += "chrpath-native"
 
 # Configuration options derived from the erlang documentation
 # https://www.erlang.org/doc/system/install.html
@@ -308,8 +310,57 @@ do_install() {
     ./otp_build release -a ${D}
 }
 
+do_install:append() {
+    # Remove test folders
+    rm -rf ${D}${libdir}/erlang/lib/*/test
+
+    # Remove src, doc, man — not needed on embedded target
+    # This avoids having to enumerate every src subdirectory in FILES
+    find ${D} -name "src" -type d | while read d; do
+        rm -rf "$d"
+    done
+    find ${D} -name "doc" -type d | while read d; do
+        rm -rf "$d"
+    done
+    find ${D} -name "man" -type d | while read d; do
+        rm -rf "$d"
+    done
+    # Remove include dirs from lib (keep erts includes for dev package)
+    #find ${D}/lib -name "include" -type d | while read d; do
+    #    rm -rf "$d"
+    #done
+
+    find ${D} -name "src" -type d -exec rm -rf {} + 2>/dev/null || true
+    find ${D} -name "doc" -type d -exec rm -rf {} + 2>/dev/null || true
+    find ${D} -name "man" -type d -exec rm -rf {} + 2>/dev/null || true
+    rm -rf ${D}/usr/include 2>/dev/null || true
+    #find ${D}/lib -name "include" -type d -exec rm -rf {} + 2>/dev/null || true
+
+    # yielding_c_fun is a host build tool — wrong RPATH, must not ship to target
+    find ${D} -name "yielding_c_fun" -type f -delete 2>/dev/null || true
+}
+
 do_install:append:class-native() {
     install -d ${D}${bindir}
+    install -d ${D}${libdir}/erlang/lib
+
+    # otp_build release -a ${D} writes versioned libs to ${D}/lib/
+    # (e.g. runtime_tools-2.4, kernel-10.1, etc.)
+    # Copy from there — NOT from ${S}/release/lib which is the unversioned bootstrap
+    if [ -d ${D}/lib ]; then
+        cp -a ${D}/lib/. ${D}${libdir}/erlang/lib/
+        bbnote "Staged versioned OTP lib tree from ${D}/lib"
+    else
+        bbwarn "${D}/lib not found — falling back to ${S}/release/lib (unversioned!)"
+        cp -a ${S}/release/lib ${D}${libdir}/erlang/
+    fi
+
+    # Sanity check
+    if ls ${D}${libdir}/erlang/lib/runtime_tools-* 1>/dev/null 2>&1; then
+        bbnote "runtime_tools versioned dir confirmed in native sysroot"
+    else
+        bbfatal "runtime_tools versioned dir STILL missing — mix compile will fail"
+    fi
 
     # Binaries: live under erts-VERSION/bin/ in the image
     for tool in erlc erlexec escript; do
@@ -333,10 +384,14 @@ do_install:append:class-native() {
     # install the full Erlang lib tree so NIFs (crypto.so etc.) are available ──
     install -d ${D}${libdir}/erlang
 
-    # Copy the release lib tree produced by otp_build release
+    # Rather than copying selected libs, copy everything compiled under the release directory
     if [ -d ${S}/release ]; then
         cp -a ${S}/release/lib   ${D}${libdir}/erlang/
         cp -a ${S}/release/erts* ${D}${libdir}/erlang/ || true
+    elif [ -d ${S}/lib ]; then
+        # Fallback if release structure is different
+        cp -a ${S}/lib          ${D}${libdir}/erlang/
+        cp -a ${S}/erts         ${D}${libdir}/erlang/
     fi
 
     # Also set ERL_ROOT so erl/erlc find libs without ERL_LIBS being set manually
@@ -381,36 +436,23 @@ do_install:append:class-native() {
             bbnote "Symlinked $(basename $f) into ${EI_LIB}/"
         done
     done
-}
 
-do_install:append() {
-    # Remove test folders
-    rm -rf ${D}${libdir}/erlang/lib/*/test
-
-    # Remove src, doc, man — not needed on embedded target
-    # This avoids having to enumerate every src subdirectory in FILES
-    find ${D} -name "src" -type d | while read d; do
-        rm -rf "$d"
+    # Strip standard paths from RPATH in native .so files to silence Yocto warnings
+    find ${D} -name "*.so" -o -name "*.so.*" | while read so; do
+        if chrpath "$so" 2>/dev/null | grep -qE '(/usr/lib64|/usr/lib\b|/lib\b)'; then
+            chrpath -d "$so" 2>/dev/null || true
+        fi
     done
-    find ${D} -name "doc" -type d | while read d; do
-        rm -rf "$d"
-    done
-    find ${D} -name "man" -type d | while read d; do
-        rm -rf "$d"
-    done
-    # Remove include dirs from lib (keep erts includes for dev package)
-    #find ${D}/lib -name "include" -type d | while read d; do
-    #    rm -rf "$d"
-    #done
 
-    find ${D} -name "src" -type d -exec rm -rf {} + 2>/dev/null || true
-    find ${D} -name "doc" -type d -exec rm -rf {} + 2>/dev/null || true
-    find ${D} -name "man" -type d -exec rm -rf {} + 2>/dev/null || true
-    rm -rf ${D}/usr/include 2>/dev/null || true
-    #find ${D}/lib -name "include" -type d -exec rm -rf {} + 2>/dev/null || true
-
-    # yielding_c_fun is a host build tool — wrong RPATH, must not ship to target
-    find ${D} -name "yielding_c_fun" -delete
+    if [ -f ${S}/bin/erl ]; then
+        install -m 0755 ${S}/bin/erl ${D}${bindir}/erl
+        # ROOTDIR in the script points to the build tmpdir — fix it to the staged lib path
+        sed -i "s|^ROOTDIR=.*|ROOTDIR=${D}${libdir}/erlang|g" ${D}${bindir}/erl
+        bbnote "Rewrote ROOTDIR in native erl to: ${D}${libdir}/erlang"
+        bbnote "Resulting ROOTDIR line: $(grep '^ROOTDIR=' ${D}${bindir}/erl)"
+    else
+        bbwarn "Native erl not found at ${S}/bin/erl"
+    fi
 }
 
 do_install:append:class-target() {
@@ -513,3 +555,6 @@ FILES:${PN}-staticdev = " \
 # rm -f ${D}${libdir}/libei.so* — so skipping libdir on the target package is fine in practice
 INSANE_SKIP:${PN} += "buildpaths usrmerge libdir"
 INSANE_SKIP:${PN}-dbg += "buildpaths usrmerge libdir"
+# RPATH warnings on standard paths are expected for native .so files (crypto NIF, test engine)
+# Yocto correctly strips these — the warnings are false positives
+INSANE_SKIP:${PN}:class-native += "rpaths"

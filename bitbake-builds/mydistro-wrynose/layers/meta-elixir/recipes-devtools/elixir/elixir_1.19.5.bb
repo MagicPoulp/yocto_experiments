@@ -62,6 +62,12 @@ do_install:append:class-target() {
     rm -rf ${D}${libdir}/elixir/lib/mix
 }
 
+do_install:append:class-native() {
+    install -d ${D}${bindir}
+    install -m 0755 ${S}/lib/mix/test/fixtures/rebar3 ${D}${bindir}/rebar3
+    bbnote "Staged rebar3 from elixir source tree to ${D}${bindir}/rebar3"
+}
+
 FILES:${PN} = " \
     ${bindir}/elixir \
     ${bindir}/elixirc \

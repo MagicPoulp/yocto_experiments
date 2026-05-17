@@ -8,14 +8,14 @@ defmodule WeatherAcq.Supervisor do
 
   def init(_opts) do
     children = [
-      #%{
-      #  id: WeatherAcq.MeteomaticsWorker,
-      #  start: {WeatherAcq.MeteomaticsWorker, :start_link, []}
-      #},
       %{
-        id: WeatherAcq.MeteomaticsCppWorker,
-        start: {WeatherAcq.MeteomaticsCppWorker, :start_link, []}
+        id: WeatherAcq.MeteomaticsWorker,
+        start: {WeatherAcq.MeteomaticsWorker, :start_link, []}
       },
+      #%{
+      #  id: WeatherAcq.MeteomaticsCppWorker,
+      #  start: {WeatherAcq.MeteomaticsCppWorker, :start_link, []}
+      #},
     ]
 
     Supervisor.init(children, strategy: :one_for_one, max_restarts: 1, max_seconds: 200)

@@ -53,3 +53,5 @@ bitbake-builds/*/layers/sources-fixed-revisions.json
 **/mix.exs
 **/_build/
 **/deps/
+
+supervision-platform-deps.tar.gz

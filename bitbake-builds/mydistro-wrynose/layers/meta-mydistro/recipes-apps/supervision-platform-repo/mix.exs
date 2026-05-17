@@ -1,3 +1,8 @@
+# Before the Yocto build this should be run locally.
+# Networking to get dependencies is not allowed for security in a Yocto build.
+# mix deps.get --only prod
+# mix deps.compile
+# tar -czvf supervision-platform-deps.tar.gz deps/
 defmodule EMS.MixProject do
   use Mix.Project
 
@@ -8,7 +13,15 @@ defmodule EMS.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       aliases: [test: "test --no-start"],
-      deps: deps()
+      deps: deps(),
+      releases: [
+        supervision_platform: [
+          # Tells mix to use the system's Yocto Erlang installation
+          include_erts: false,
+          include_executables_for: [:unix],
+          applications: [runtime_tools: :permanent]
+        ]
+      ]
     ]
   end
 

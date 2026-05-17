@@ -1,41 +1,86 @@
+#Before the Yocto build this should be run locally.
+#Networking to get dependencies is not allowed for security in a Yocto build.
+#mix deps.get --only prod
+#tar -czvf supervision-platform-deps.tar.gz deps/
+
 SUMMARY = "A supervision platform that restarts a process if it crashes"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE.txt;md5=8fe15be9c1355b986d0901a0fc1bf691"
 
-DEPENDS = "erlang elixir"
-RDEPENDS:${PN} += "erlang elixir"
-# nodejs is just to run a test server
-RDEPENDS:${PN} += "nodejs"
+DEPENDS = "erlang elixir erlang-native elixir-native libcap"
+RDEPENDS:${PN} += "erlang elixir nodejs"
 
-# using a local folder for testing purpose, but we could user a real repo
+# Inherit chrpath to natively clear host RPATHs from compiled binaries safely
+inherit chrpath
+
 FILESEXTRAPATHS:prepend := "${THISDIR}/..:"
-SRC_URI = "file://supervision-platform-repo"
+SRC_URI = " \
+    file://supervision-platform-repo \
+    file://supervision-platform-repo/supervision-platform-deps.tar.gz \
+"
 
 S = "${UNPACKDIR}/supervision-platform-repo"
 
+do_configure() {
+    if [ -d "${UNPACKDIR}/deps" ]; then
+        cp -r ${UNPACKDIR}/deps ${S}/
+    else
+        bbfatal "The unpacked 'deps' folder was not found. Ensure you archived it correctly."
+    fi
+}
+
+do_compile() {
+    cd ${S}
+
+    export MIX_ENV="prod"
+    export HEX_OFFLINE=1
+    export MIX_REBAR3="${STAGING_BINDIR_NATIVE}/rebar3"
+    export ERL_EI_LIBDIR="${STAGING_LIBDIR_NATIVE}/erlang/lib/erl_interface/lib"
+    export ERL_EI_INCLUDE_DIR="${STAGING_LIBDIR_NATIVE}/erlang/lib/erl_interface/include"
+    export ERL_LDFLAGS="-lcap"
+
+    bbnote "Surgically purging runtime_tools references with syntax safety guards..."
+    
+    # 1. Clean Elixir mix.exs files using precise syntax matching
+    find . -type f -name "mix.exs" | while read -r file; do
+        sed -E -i 's/runtime_tools\s*:\s*:[a-zA-Z0-9_]+\s*,\s*//g' "$file"
+        sed -E -i 's/,\s*runtime_tools\s*:\s*:[a-zA-Z0-9_]+//g' "$file"
+        sed -E -i 's/\[\s*runtime_tools\s*:\s*:[a-zA-Z0-9_]+\s*\]/\[\]/g' "$file"
+        
+        sed -E -i 's/:runtime_tools\s*,\s*//g' "$file"
+        sed -E -i 's/,\s*:runtime_tools//g' "$file"
+        sed -E -i 's/\[\s*:runtime_tools\s*\]/\[\]/g' "$file"
+    done
+
+    # 2. Clean Erlang app configurations safely (standard comma-separated terms)
+    find . -type f \( -name "*.app" -o -name "*.app.src" \) | while read -r file; do
+        sed -E -i 's/runtime_tools\s*,\s*//g' "$file"
+        sed -E -i 's/,\s*runtime_tools//g' "$file"
+        sed -E -i 's/\[\s*runtime_tools\s*\]/\[\]/g' "$file"
+    done
+
+    # Build steps
+    mix deps.compile --no-deps-check
+    mix compile --no-deps-check
+    mix release --overwrite --no-deps-check
+}
+
 do_install() {
-    # Create the parent directory structure using install
     install -d ${D}/opt/supervision-platform
-
-    # Switch to the source directory to keep paths relative
-    cd ${UNPACKDIR}/supervision-platform-repo
-
-    # Mirror the directory structure first (Directories must be 0755 to be accessible)
-    find . -type d -exec install -d -m 0755 {} ${D}/opt/supervision-platform/{} \;
-
-    # Securely install regular files with 0644 (Read-only for general system/users)
-    # This covers your .beam files and config files safely.
-    find . -type f ! -path "./bin/*" -exec install -m 0644 {} ${D}/opt/supervision-platform/{} \;
-
-    # Securely install ONLY the execution scripts with 0755
-    # This ensures your Elixir boot runners can actually start.
-    if [ -d ./bin ]; then
-        find ./bin -type f -exec install -m 0755 {} ${D}/opt/supervision-platform/bin/{} \;
+    
+    if [ -d ${S}/_build/prod/rel/ems ]; then
+        cp -r ${S}/_build/prod/rel/ems/* ${D}/opt/supervision-platform/
+        LN_TARGET="ems"
+    else
+        cp -r ${S}/_build/prod/rel/supervision_platform/* ${D}/opt/supervision-platform/
+        LN_TARGET="supervision_platform"
     fi
 
-    # Expose the app to the system via /usr/bin
     install -d ${D}${bindir}
-    #ln -rs ${D}/opt/supervision-platform/bin/supervision ${D}${bindir}/supervision
+    ln -rs ${D}/opt/supervision-platform/bin/${LN_TARGET} ${D}${bindir}/supervision-platform
+
+    # Clean native fix: Clear out hostile build paths from the target directory before packaging QA runs
+    chrpath --delete ${D}/opt/supervision-platform/lib/*/priv/lib/*/*.so || true
 }
 
 FILES:${PN} += " \
@@ -44,45 +89,4 @@ FILES:${PN} += " \
 "
 
 INSANE_SKIP:${PN} += "buildpaths"
-
-#inherit mix   # provided by meta-erlang
-
-# Hex dependencies must be pre-fetched
-# Run this locally first to generate the lockfile:
-# mix deps.get && mix deps.compile
-#MIX_ENV = "prod"
-
-#do_compile() {
-#    cd ${S}
-#    mix local.hex --force
-#    mix local.rebar --force
-#    mix deps.get --only prod
-#    mix release --overwrite
-#}
-
-#do_install() {
-#    install -d ${D}${bindir}
-#    install -d ${D}/opt/myapp
-
-# Install the release
-#    cp -r ${S}/_build/prod/rel/myapp/* ${D}/opt/myapp/
-
-#    # Symlink the start script to PATH
-#    ln -sf /opt/myapp/bin/myapp ${D}${bindir}/myapp
-#}
-
-#FILES:${PN} += "/opt/myapp"
-
-#do_compile() {
-# Establish the build environment variables so Hex/Mix don't reach out to the web
-#    export MIX_ENV="prod"
-#    export HEX_OFFLINE=1
-
-# Explicitly point Mix to the Yocto cross-compiler Erlang Interface paths
-#   export ERL_EI_LIBDIR="${STAGING_LIBDIR_NATIVE}/erlang/lib/erl_interface/lib"
-#   export ERL_EI_INCLUDE_DIR="${STAGING_LIBDIR_NATIVE}/erlang/lib/erl_interface/include"
-
-# Compile the pre-fetched dependencies and the app without fetching
-#   mix deps.compile --no-deps-check
-#   mix compile --no-deps-check
-#}
+INSANE_SKIP:${PN}-dbg += "buildpaths"

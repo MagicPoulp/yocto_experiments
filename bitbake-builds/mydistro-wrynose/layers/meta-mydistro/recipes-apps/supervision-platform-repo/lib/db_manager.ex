@@ -1,4 +1,4 @@
-  # weather is the DB table
+# weather is the DB table
 #  schema "weather.forecast" do
 #    field :temperature, :float
 #    field :wind_speed, :float
