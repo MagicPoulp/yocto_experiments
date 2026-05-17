@@ -49,3 +49,7 @@ task-depends.dot
 bitbake-builds/*/build/conf-upstream.*/
 bitbake-builds/*/layers/*-backup.*/
 bitbake-builds/*/layers/sources-fixed-revisions.json
+
+**/mix.exs
+**/_build/
+**/deps/
