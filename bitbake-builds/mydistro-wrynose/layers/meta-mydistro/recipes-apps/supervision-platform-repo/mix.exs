@@ -28,7 +28,8 @@ defmodule EMS.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      # erlexecis needed to do exec.run and start C++ processes
+      extra_applications: [:logger, :erlexec],
       mod: {EMS.Application, []}
     ]
   end

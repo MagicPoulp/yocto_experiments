@@ -10,6 +10,7 @@ IMAGE_INSTALL = " \
 
 IMAGE_INSTALL:append = " \
     myapp-elixir \
+    myapp-cpp \
 "
 
 # myapp-cpp

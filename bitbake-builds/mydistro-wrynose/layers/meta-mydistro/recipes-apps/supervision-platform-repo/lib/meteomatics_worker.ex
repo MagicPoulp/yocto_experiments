@@ -1,6 +1,35 @@
-
 defmodule WeatherAcq.MeteomaticsWorker do
-  alias WeatherAcq.JsonValidator, as: JsonValidator
+  use GenServer
+  require Logger
+  alias WeatherAcq.JsonValidator
+
+  @interval 3_000
+
+  # Called by the Supervisor
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  # OTP callback — runs inside the new process, must return quickly
+  @impl true
+  def init(_opts) do
+    Logger.info("MeteomaticsWorker: starting")
+    # Schedule the first tick instead of blocking here
+    schedule_tick()
+    {:ok, %{current_index: 0}}
+  end
+
+  # Handles the recurring work
+  @impl true
+  def handle_info(:tick, %{current_index: index} = state) do
+    next_index = get_json_fake(index)
+    schedule_tick()
+    {:noreply, %{state | current_index: next_index}}
+  end
+
+  defp schedule_tick do
+    Process.send_after(self(), :tick, @interval)
+  end
 
   @fake_json_raw """
   {
@@ -53,19 +82,8 @@ defmodule WeatherAcq.MeteomaticsWorker do
   }
   """
 
-  def start_link() do
-    pid = spawn_link(__MODULE__, :init, [])
-    {:ok, pid}
-  end
-
-  def init() do
-    IO.puts "Start MeteomaticsWorker with pid #{inspect self()}"
-    currentIndex = 0
-    worker_loop(currentIndex)
-  end
-
   def worker_loop(currentIndex) do
-    IO.puts("\nloop: item index: #{currentIndex}")
+    Logger.info("\nloop: item index: #{currentIndex}")
     next_index = get_json_fake(currentIndex)
     :timer.sleep(3000)
     #Pass the next index down to the next loop
@@ -90,7 +108,7 @@ defmodule WeatherAcq.MeteomaticsWorker do
       # Return the incremented index (wrapped around by total elements)
       rem(currentIndex + 1, total_elements)
     else
-      IO.puts("No forecast data found.")
+      Logger.info("No forecast data found.")
       0
     end
   end
@@ -103,7 +121,7 @@ defmodule WeatherAcq.MeteomaticsWorker do
       JsonValidator.validate_json(decoded, :meteomatics_worker)
       JsonValidator.validate_strings_for_sql_injection(decoded)
       forecastPoints = create_forecast_points(decoded)
-      IO.puts(forecastPoints)
+      Logger.info(forecastPoints)
       WeatherAcq.DbManager.store(forecastPoints)
     end
   end

@@ -9,6 +9,10 @@ LIC_FILES_CHKSUM = "file://LICENSE.txt;md5=8fe15be9c1355b986d0901a0fc1bf691"
 
 DEPENDS = "erlang elixir erlang-native elixir-native libcap"
 RDEPENDS:${PN} += "erlang elixir"
+WORKER_APPS = " \
+myapp-cpp \
+"
+RDEPENDS:${PN} += "${WORKER_APPS}"
 
 # Inherit chrpath to natively clear host RPATHs from compiled binaries safely
 inherit chrpath
@@ -66,35 +70,25 @@ do_compile() {
 }
 
 do_install() {
-    install -d ${D}/opt/supervision-platform
+    install -d ${D}/opt/supervision_platform
 
     if [ -d ${S}/_build/prod/rel/ems ]; then
-        cp -r ${S}/_build/prod/rel/ems/* ${D}/opt/supervision-platform/
+        cp -r ${S}/_build/prod/rel/ems/* ${D}/opt/supervision_platform/
         LN_TARGET="ems"
     else
-        cp -r ${S}/_build/prod/rel/supervision_platform/* ${D}/opt/supervision-platform/
+        cp -r ${S}/_build/prod/rel/supervision_platform/* ${D}/opt/supervision_platform/
         LN_TARGET="supervision_platform"
     fi
 
     install -d ${D}${bindir}
-    ln -rs ${D}/opt/supervision-platform/bin/${LN_TARGET} ${D}${bindir}/supervision-platform
+    ln -rs ${D}/opt/supervision_platform/bin/${LN_TARGET} ${D}${bindir}/supervision_platform
 
     # Clean native fix: Clear out hostile build paths from the target directory before packaging QA runs
-    chrpath --delete ${D}/opt/supervision-platform/lib/*/priv/lib/*/*.so || true
-
-    # testing using nodejs
-    # Explicitly install the node_server folder into /opt/supervision-platform/node_server
-    if [ -d ${S}/node_server ]; then
-        cp -r ${S}/node_server ${D}/opt/supervision-platform/
-        # Ensure proper read/execute permissions for Node.js assets
-        chmod -R 755 ${D}/opt/supervision-platform/node_server
-    else
-        bbfatal "Source node_server directory not found in ${S}"
-    fi
+    chrpath --delete ${D}/opt/supervision_platform/lib/*/priv/lib/*/*.so || true
 }
 
 FILES:${PN} += " \
-    /opt/supervision-platform \
+    /opt/supervision_platform \
     ${bindir} \
 "
 
